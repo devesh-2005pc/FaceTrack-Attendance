@@ -32,8 +32,8 @@ A high-performance, real-time facial recognition attendance system designed for 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/fba-system.git
-cd fba-system
+git clone https://github.com/saahil-007/FBA.git
+cd FBA
 ```
 
 ### 2. Backend Setup
