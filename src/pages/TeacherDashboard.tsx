@@ -121,7 +121,7 @@ export default function TeacherDashboard() {
 
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
         <h1 className="text-4xl md:text-5xl font-bold text-cyan-400 mb-2 tracking-wider drop-shadow-md animate-fade-in">
-          || श्री स्वामी समर्थ ||
+          Smart Attendence 
         </h1>
 
         <p className="text-gray-400 mb-12 text-sm md:text-base">{currentDate}</p>
@@ -132,7 +132,7 @@ export default function TeacherDashboard() {
             <div className="card-inner p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text mb-2">
-                  Smart Attendance
+                  Start Attendence 
                 </h2>
                 <div className="w-20 h-1 mx-auto bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"></div>
               </div>
