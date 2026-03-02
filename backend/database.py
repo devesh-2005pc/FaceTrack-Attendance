@@ -12,116 +12,97 @@ if not url or not key:
 
 supabase: Client = create_client(url, key)
 
-def get_student_embeddings(branch: str, division: str):
-    response = supabase.table('students')\
-        .select('id, roll_no, name, face_descriptor')\
-        .eq('branch', branch)\
-        .eq('division', division)\
+
+def get_student_embeddings(division):
+    """Fetch all students in a division"""
+    res = supabase.table("students") \
+        .select("id,name,roll_no,face_descriptor") \
+        .eq("division", division) \
         .execute()
-    return response.data
+    return res.data or []
+
 
 def mark_attendance_db(session_id: str, student_id: str):
+    """Mark a student as present for a session"""
     try:
         supabase.table('attendance_records').insert({
             "session_id": session_id,
-            "student_id": student_id,
-            "status": "present"
+            "student_id": student_id
         }).execute()
         return True
-    except Exception:
+    except Exception as e:
+        print(f"Error marking attendance: {e}")
         return False
 
-def authenticate_teacher(username, password):
-    # Hardcoded fallback for immediate access
-    if username == "teacher" and password == "password123":
-        # Use a valid UUID to satisfy database type constraints
-        return {"id": "56faae9c-c2a4-491d-9b81-659449a0398a", "username": "teacher", "role": "teacher"}
-
-    # Temporary auth against a users table
-    try:
-        res = supabase.table('users').select('*').eq('username', username).eq('password', password).execute()
-        if res.data:
-            return res.data[0]
-        return None
-    except Exception:
-        return None
 
 def create_session_db(session_data):
+    """Create a session with teacher_name, date, division"""
     try:
-        # Print data for debugging
-        print(f"Attempting to create session with: {session_data}")
         res = supabase.table('sessions').insert(session_data).execute()
-        print(f"Supabase response: {res}")
         if res.data:
             return res.data[0]
         return None
     except Exception as e:
         print(f"Error creating session: {e}")
-        # Return the error message to the caller for better debugging
-        return {"error": str(e)}
+        return None
+
 
 def update_student_face(roll_no, embedding):
+    """Update face descriptor of a student"""
     try:
-        supabase.table('students').update({'face_descriptor': embedding}).eq('roll_no', roll_no).execute()
+        supabase.table('students').update({'face_descriptor': embedding}) \
+            .eq('roll_no', roll_no).execute()
         return True
     except Exception as e:
         print(f"Error updating student face: {e}")
         return False
 
-def get_attendance_history_db(teacher_id: str = None):
-    try:
-        # 1. Get Sessions (optionally filtered by teacher)
-        query = supabase.table('sessions').select('*')
-        if teacher_id:
-            query = query.eq('teacher_id', teacher_id)
-        
-        sessions_res = query.execute()
-        sessions = {s['id']: s for s in sessions_res.data}
-        session_ids = list(sessions.keys())
 
+def get_attendance_history_db():
+    """Get full attendance history (merged with student + session info)"""
+    try:
+        # 1. Get all sessions
+        sessions_res = supabase.table('sessions').select('*').execute()
+        sessions = {s['id']: s for s in sessions_res.data} if sessions_res.data else {}
+        session_ids = list(sessions.keys())
         if not session_ids:
             return []
 
-        # 2. Get Attendance Records for these sessions
-        attendance_res = supabase.table('attendance_records')\
-            .select('*')\
-            .in_('session_id', session_ids)\
-            .order('timestamp', desc=True)\
+        # 2. Get attendance records for these sessions
+        attendance_res = supabase.table('attendance_records') \
+            .select('*') \
+            .in_('session_id', session_ids) \
+            .order('timestamp', desc=True) \
             .execute()
-        
-        records = attendance_res.data
+        records = attendance_res.data or []
+
         if not records:
             return []
 
-        # 3. Get Students details
+        # 3. Get student details
         student_ids = list(set(r['student_id'] for r in records))
-        students_res = supabase.table('students')\
-            .select('id, name, roll_no, branch, division')\
-            .in_('id', student_ids)\
+        students_res = supabase.table('students') \
+            .select('id, name, roll_no, division') \
+            .in_('id', student_ids) \
             .execute()
-        
-        students = {s['id']: s for s in students_res.data}
+        students = {s['id']: s for s in students_res.data} if students_res.data else {}
 
-        # 4. Merge Data
+        # 4. Merge data
         history = []
         for r in records:
             session = sessions.get(r['session_id'])
             student = students.get(r['student_id'])
-            
             if session and student:
                 history.append({
-                    "id": r.get('id'), # Assuming record has an ID
-                    "date": r['timestamp'],
+                    "id": r.get('id'),
+                    "date": session['date'],
+                    "teacher_name": session['teacher_name'],
+                    "division": session['division'],
                     "student_name": student['name'],
                     "roll_no": student['roll_no'],
-                    "branch": session['branch'],
-                    "division": session['division'],
-                    "subject": session['subject'],
-                    "class_name": session['class_name'],
-                    "status": r.get('status', 'Present'),
+                    "status": "Present",
                     "session_id": session['id']
                 })
-        
         return history
 
     except Exception as e:

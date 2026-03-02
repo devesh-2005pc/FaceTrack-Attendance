@@ -11,7 +11,7 @@ export default function StudentAttendance() {
   const { showNotification } = useNotifications();
   const webcamRef = useRef<Webcam>(null);
   const ws = useRef<WebSocket | null>(null);
-  
+
   const [lastMarked, setLastMarked] = useState<string | null>(null);
   const [detectedStudent, setDetectedStudent] = useState<{name: string, roll_no: string} | null>(null);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
@@ -32,67 +32,47 @@ export default function StudentAttendance() {
 
     const socket = new WebSocket(`${WEBSOCKET_URL(window.location.hostname)}/${sessionId}`);
     
-    socket.onopen = () => {
-      setIsConnected(true);
-    };
+    socket.onopen = () => setIsConnected(true);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
       if (data.status === 'success' || data.status === 'already_marked') {
         const student = data.student || data.data;
         if (!student) return;
 
-        // Fetch photo from Supabase Storage
-        // Path format: COMPUTER/TE 2025-26/A/{roll_no}/{roll_no}.jpg
-        // Note: Roll no in DB might be '030', while folder might be '30' or '030'
-        // Based on my migration script, it's 'COMPUTER/TE 2025-26/A/{roll_no}/{roll_no}.jpg'
         const photoPath = `COMPUTER/TE 2025-26/A/${student.roll_no}/${student.roll_no}.jpg`;
         const photoUrl = `https://eizhumokwxcmtjczpkuu.supabase.co/storage/v1/object/public/student_faces/${photoPath}`;
-        
+
         setStudentPhoto(photoUrl);
         setDetectedStudent(student);
         setFacialArea(data.facial_area);
         setLastMarked(student.roll_no);
-        
+
         if (facialAreaTimeout.current) clearTimeout(facialAreaTimeout.current);
-        
-        // Keep detection UI visible for a bit longer
         facialAreaTimeout.current = setTimeout(() => {
           setDetectedStudent(null);
           setStudentPhoto(null);
           setFacialArea(null);
         }, 2500);
 
-        // Keep lastMarked visible for feedback
-        setTimeout(() => {
-          setLastMarked(null);
-        }, 3000);
+        setTimeout(() => setLastMarked(null), 3000);
       } else if (data.status === 'detected') {
         setFacialArea(data.facial_area);
-        
         if (facialAreaTimeout.current) clearTimeout(facialAreaTimeout.current);
-        
-        // Slightly longer delay than streaming interval to prevent flickering
-        facialAreaTimeout.current = setTimeout(() => setFacialArea(null), 250); 
+        facialAreaTimeout.current = setTimeout(() => setFacialArea(null), 250);
       }
     };
 
-    socket.onclose = () => {
-      setIsConnected(false);
-    };
+    socket.onclose = () => setIsConnected(false);
 
     ws.current = socket;
 
-    // Fast streaming at 10fps for production performance
     const interval = setInterval(() => {
       if (ws.current?.readyState === WebSocket.OPEN && webcamRef.current) {
         const imageSrc = webcamRef.current.getScreenshot();
-        if (imageSrc) {
-          ws.current.send(imageSrc);
-        }
+        if (imageSrc) ws.current.send(imageSrc);
       }
-    }, 100); 
+    }, 100);
 
     return () => {
       clearInterval(interval);
@@ -117,10 +97,8 @@ export default function StudentAttendance() {
         </div>
       </div>
 
-      {/* Main Camera Card */}
-      <div 
-        className="w-full max-w-[320px] aspect-[3/4] relative rounded-[2rem] overflow-hidden border-[4px] border-zinc-900 shadow-2xl bg-zinc-900 group"
-      >
+      {/* Camera Card */}
+      <div className="w-full max-w-[320px] aspect-[3/4] relative rounded-[2rem] overflow-hidden border-[4px] border-zinc-900 shadow-2xl bg-zinc-900 group">
         {cameraError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-6 z-40 bg-zinc-900">
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -144,21 +122,15 @@ export default function StudentAttendance() {
               audio={false}
               screenshotFormat="image/jpeg"
               onUserMediaError={handleCameraError}
-              videoConstraints={{ 
-                facingMode: 'user', 
-                width: { ideal: 720 },
-                height: { ideal: 960 }
-              }}
+              videoConstraints={{ facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }}
               className="absolute inset-0 w-full h-full object-cover grayscale-[0.2] brightness-110 contrast-110"
             />
-            
-            {/* Overlay Grid/Markers */}
+
+            {/* Overlay */}
             <div className="absolute inset-0 z-20 pointer-events-none">
               <div className="absolute inset-12 border border-white/5 rounded-[2.5rem]" />
               <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/5" />
               <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/5" />
-              
-              {/* Corner Accents */}
               <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-white/20 rounded-tl-2xl" />
               <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-white/20 rounded-tr-2xl" />
               <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-white/20 rounded-bl-2xl" />
@@ -182,9 +154,6 @@ export default function StudentAttendance() {
                       <div className="bg-green-500 text-black px-2 py-0.5 rounded-md text-[8px] font-black uppercase shadow-lg whitespace-nowrap">
                         {detectedStudent.roll_no} • {detectedStudent.name.split(' ')[0]}
                       </div>
-                      {studentPhoto && (
-                        <img src={studentPhoto} alt="" className="hidden" />
-                      )}
                     </div>
                   )}
                 </div>
@@ -193,12 +162,12 @@ export default function StudentAttendance() {
           </>
         )}
       </div>
-      
+
       <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-4">
         Position your face within the frame
       </p>
 
-      {/* Footer Status */}
+      {/* Footer */}
       <div className="w-full max-w-md h-32 flex flex-col items-center justify-center">
         {lastMarked ? (
           <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 duration-500">
@@ -212,18 +181,13 @@ export default function StudentAttendance() {
             <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
               <div className="w-full h-full bg-blue-500/50 animate-[shimmer_2s_infinite]" />
             </div>
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
-              Scanning for face...
-            </p>
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Scanning for face...</p>
           </div>
         )}
       </div>
 
       <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
       `}</style>
     </div>
   );

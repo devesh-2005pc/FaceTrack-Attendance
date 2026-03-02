@@ -5,12 +5,16 @@ import { useNotifications } from '@/lib/notifications'
 
 export default function Settings() {
   const navigate = useNavigate()
-  const { preferences, updatePreferences, resetPreferences } = usePreferences()
+  const { preferences, setPreferences, resetPreferences } = usePreferences()
   const { showNotification } = useNotifications()
 
   const handleReset = () => {
     resetPreferences()
     showNotification('info', 'Settings Reset', 'All preferences have been restored to default.')
+  }
+
+  const handleToggle = (key: keyof typeof preferences, value: boolean) => {
+    setPreferences({ ...preferences, [key]: value })
   }
 
   return (
@@ -50,7 +54,7 @@ export default function Settings() {
                     id={item.id}
                     type="checkbox"
                     checked={preferences[item.key as keyof typeof preferences] as boolean}
-                    onChange={e => updatePreferences({ [item.key]: e.target.checked })}
+                    onChange={e => handleToggle(item.key as keyof typeof preferences, e.target.checked)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

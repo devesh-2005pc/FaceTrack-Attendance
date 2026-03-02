@@ -12,34 +12,28 @@ interface Preferences {
 interface PreferencesContextType {
   preferences: Preferences
   setPreferences: (newPreferences: Partial<Preferences>) => void
-  updatePreferences: (newPreferences: Partial<Preferences>) => void
   resetPreferences: () => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
 
+const DEFAULT_PREFERENCES: Preferences = {
+  persistFilters: true,
+  reduceMotion: false,
+  autoStartCamera: true,
+  compactLayout: false,
+  enableSounds: true,
+  highContrast: false,
+}
+
 export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
   const [preferences, setPreferencesState] = useState<Preferences>(() => {
     try {
       const storedPrefs = localStorage.getItem('userPreferences')
-      return storedPrefs ? JSON.parse(storedPrefs) : { 
-        persistFilters: true,
-        reduceMotion: false,
-        autoStartCamera: true,
-        compactLayout: false,
-        enableSounds: true,
-        highContrast: false
-      }
+      return storedPrefs ? JSON.parse(storedPrefs) : DEFAULT_PREFERENCES
     } catch (error) {
       console.error('Failed to parse stored preferences:', error)
-      return { 
-        persistFilters: true,
-        reduceMotion: false,
-        autoStartCamera: true,
-        compactLayout: false,
-        enableSounds: true,
-        highContrast: false
-      }
+      return DEFAULT_PREFERENCES
     }
   })
 
@@ -51,36 +45,24 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [preferences])
 
+  // Update preferences
   const setPreferences = (newPreferences: Partial<Preferences>) => {
-    setPreferencesState(prevPrefs => ({ ...prevPrefs, ...newPreferences }))
+    setPreferencesState(prev => ({ ...prev, ...newPreferences }))
   }
 
-  const updatePreferences = (newPreferences: Partial<Preferences>) => {
-    setPreferencesState(prevPrefs => ({ ...prevPrefs, ...newPreferences }))
-  }
-
-  const resetPreferences = () => {
-    setPreferencesState({
-      persistFilters: true,
-      reduceMotion: false,
-      autoStartCamera: true,
-      compactLayout: false,
-      enableSounds: true,
-      highContrast: false
-    })
-  }
+  // Reset to default
+  const resetPreferences = () => setPreferencesState(DEFAULT_PREFERENCES)
 
   return (
-    <PreferencesContext.Provider value={{ preferences, setPreferences, updatePreferences, resetPreferences }}>
+    <PreferencesContext.Provider value={{ preferences, setPreferences, resetPreferences }}>
       {children}
     </PreferencesContext.Provider>
   )
 }
 
+// Custom hook
 export const usePreferences = () => {
   const context = useContext(PreferencesContext)
-  if (context === undefined) {
-    throw new Error('usePreferences must be used within a PreferencesProvider')
-  }
+  if (!context) throw new Error('usePreferences must be used within a PreferencesProvider')
   return context
 }

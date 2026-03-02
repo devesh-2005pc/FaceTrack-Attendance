@@ -31,6 +31,7 @@ lerna-debug.log*
 .env.production
 .env.local
 
+
 # Python / Backend (General patterns)
 __pycache__/
 *.py[cod]
@@ -42,6 +43,7 @@ env/
 .env
 *.bak
 *.tmp
+backend/venv310/
 
 # Project Specific
 backend/student_faces/
